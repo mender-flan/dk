@@ -1,9 +1,5 @@
 .PHONY: help setup install clean build typecheck dev start
 
-ENTRY_TS := src/index.ts
-ENTRY_JS := dist/index.js
-DIST_DIR := dist
-
 help:
 	@echo 'Targets:'
 	@echo '  make setup       Install deps and build'
@@ -14,22 +10,23 @@ help:
 	@echo '  make typecheck   Type-check without emitting'
 	@echo '  make clean       Remove build output'
 
-setup: install build
+setup:
+	npm run setup
 
 install:
 	npm install
 
 clean:
-	rm -rf $(DIST_DIR)
+	npm run clean
 
-build: clean
-	npm exec -- tsc -p tsconfig.json
+build:
+	npm run build
 
 typecheck:
-	npm exec -- tsc -p tsconfig.json --noEmit
+	npm run typecheck
 
 dev:
-	npm exec -- tsx $(ENTRY_TS)
+	npm run dev
 
 start:
-	node $(ENTRY_JS)
+	npm run start

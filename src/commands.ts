@@ -2,11 +2,15 @@ import { stdout } from 'node:process';
 
 export type CommandResult = 'continue' | 'exit';
 
-export function handleCommand(input: string): CommandResult {
-  if (input === 'quit' || input === 'exit') return 'exit';
+const BASE_COMMANDS = ['help', 'quit', 'exit'] as const;
 
-  if (input === 'help') {
-    stdout.write('Commands: help, quit, exit\n');
+export function handleCommand(input: string): CommandResult {
+  const cmd = input.trim().toLowerCase();
+
+  if (cmd === 'quit' || cmd === 'exit') return 'exit';
+
+  if (cmd === 'help') {
+    stdout.write(`Commands: ${BASE_COMMANDS.join(', ')}\n`);
     return 'continue';
   }
 

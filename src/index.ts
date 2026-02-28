@@ -21,11 +21,13 @@ async function main(): Promise<void> {
       "Type 'help' for commands, or 'quit'/'exit' to leave the game. Story content will be added later.\n\n",
     );
 
-    while (true) {
+    let running = true;
+    while (running) {
       let input: string;
       try {
         input = (await rl.question('> ')).trim();
       } catch {
+        stdout.write('\nGoodbye!\n');
         break;
       }
 
@@ -33,7 +35,7 @@ async function main(): Promise<void> {
 
       try {
         const result: CommandResult = handleCommand(input);
-        if (result === 'exit') break;
+        if (result === 'exit') running = false;
       } catch (err) {
         console.error('Command error:', err instanceof Error ? err.message : String(err));
       }

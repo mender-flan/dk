@@ -6,11 +6,12 @@
   "description": "Procedural TypeScript command line text adventure.",
   "license": "UNLICENSED",
   "scripts": {
-    "clean": "make clean",
-    "build": "make build",
-    "typecheck": "make typecheck",
-    "dev": "make dev",
-    "start": "make start"
+    "setup": "npm install && npm run build",
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
   },
   "devDependencies": {
     "@types/node": "^25.3.2",
