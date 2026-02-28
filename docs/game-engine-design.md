@@ -26,6 +26,11 @@ This document proposes an engine architecture that:
 - Multiplayer.
 - Infinite simulation. Generation is finite; play is open-ended within that world.
 
+## Document conventions
+
+- **Hard constraints** in this doc (determinism, solvability validation, separation of generation/simulation/narration) are intended to be *normative*.
+- **API shapes, TypeScript types, and module layout** are *illustrative examples* and can evolve as the codebase grows.
+
 ## Key concepts
 
 - **World**: A graph of locations connected by exits.
@@ -137,6 +142,8 @@ export interface GameEngine {
 export function createEngine(config: EngineConfig): GameEngine;
 ```
 
+`StepResult` includes both human-readable output and structured data (`events`, `PlayerView`). The default CLI can rely primarily on `output`, while debug tooling and future frontends can ignore `output` and use the structured fields.
+
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
 
 ## Data model
@@ -201,6 +208,8 @@ export interface WorldState {
 This is “just enough structure” to support procedural generation, rule application, and narration.
 
 As entity behaviors grow (e.g., “an item that is also a container” or “a door that is also a prop”), we should avoid a combinatorial explosion of union variants by refactoring toward composable capabilities (such as `Located`, `Lockable`, `Container`) stored as tagged records or side tables.
+
+To keep that migration path open, rules should prefer capability predicates (for example, “is this entity lockable?”) over hard-coding knowledge of a closed set of union members.
 
 ## Procedural generation pipeline
 
@@ -300,6 +309,13 @@ Solvability validation:
 - If unsolved, regenerate only the failing layer (e.g., rebind challenges, move items), not the entire world.
 - If solvability cannot be proven after the retry budget, fall back to a simpler, guaranteed-solvable template set and surface a debug-visible error that includes the `seed` and failing constraints.
 
+Validation failure reporting (minimum):
+
+- `seed`
+- failing challenge IDs and their prerequisites
+- unreachable location IDs (from the player start)
+- how many attempts were made per layer
+
 ## Runtime simulation
 
 ### Turn model
@@ -376,6 +392,8 @@ Implementation approach:
 - Summaries for multi-event outcomes (e.g., moving rooms triggers describing the new room, not every intermediate event).
 
 Narration templates and storylets should be treated as versioned content (data-first assets) and covered by regression tests (for example, golden output snapshots for a fixed seed and a short command sequence) so that engine rule changes don’t silently degrade the fiction layer.
+
+Critical puzzle clues should not exist only as flavor text. They should be represented structurally (flags, goals, or explicit “hint” events) and rendered in at least one guaranteed way so that tests can assert clue presence even as narration templates evolve.
 
 ## Saving + loading
 
