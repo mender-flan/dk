@@ -117,13 +117,26 @@ export interface EngineConfig {
   playerName?: string;
 }
 
+export interface ChallengeView {
+  id: string;
+  summary: string;
+  state: 'unknown' | 'known' | 'in-progress' | 'completed';
+}
+
+export interface PlayerStatus {
+  isAlive: boolean;
+  conditions: string[];
+}
+
 export interface PlayerView {
   turn: number;
   locationId: EntityId;
   locationName: string;
-  visibleEntityIds: EntityId[];
-  inventoryEntityIds: EntityId[];
-  goals: Array<{ id: string; summary: string }>;
+  visibleEntities: Array<{ id: EntityId; name: string; kind: EntityKind }>;
+  inventoryEntities: Array<{ id: EntityId; name: string; kind: EntityKind }>;
+  challenges: ChallengeView[];
+  discoveredClueIds: string[];
+  status: PlayerStatus;
 }
 
 export interface StepResult {
@@ -140,6 +153,7 @@ export interface GameEngine {
 }
 
 export function createEngine(config: EngineConfig): GameEngine;
+export function loadEngine(serialized: string): GameEngine;
 ```
 
 `StepResult` includes both human-readable output and structured data (`events`, `PlayerView`). The default CLI can rely primarily on `output`, while debug tooling and future frontends can ignore `output` and use the structured fields.
@@ -195,13 +209,17 @@ export type Entity =
   | (EntityBase & { kind: 'player' } & Located)
   | (EntityBase & { kind: 'npc' } & Located & { mind: NPCMind })
   | (EntityBase & { kind: 'item' } & Located)
-  | (EntityBase & { kind: 'door' } & Located & Lockable);
+  | (EntityBase & { kind: 'door' } & Located & Lockable)
+  | (EntityBase & { kind: 'container'; contains: EntityId[]; capacity: number } & Located)
+  | (EntityBase & { kind: 'prop'; tags: string[]; isInteractable: boolean } & Located);
 
 export interface WorldState {
   turn: number;
   entities: Map<EntityId, Entity>;
   playerId: EntityId;
   flags: Set<string>; // narrative facts / global toggles
+  challenges: Map<string, { summary: string; state: ChallengeView['state'] }>;
+  discoveredClues: Set<string>;
 }
 ```
 
@@ -210,6 +228,11 @@ This is “just enough structure” to support procedural generation, rule appli
 As entity behaviors grow (e.g., “an item that is also a container” or “a door that is also a prop”), we should avoid a combinatorial explosion of union variants by refactoring toward composable capabilities (such as `Located`, `Lockable`, `Container`) stored as tagged records or side tables.
 
 To keep that migration path open, rules should prefer capability predicates (for example, “is this entity lockable?”) over hard-coding knowledge of a closed set of union members.
+
+### Capability access for rules
+
+- Domain rules should avoid exhaustive `kind` switching except at narrow boundaries (narration, debugging).
+- Prefer small query helpers like `getLocation(entityId)`, `isLockable(entityId)`, `getContainerContents(entityId)` so that a future migration to side tables/capability maps doesn’t require rewriting every rule.
 
 ## Procedural generation pipeline
 
@@ -301,13 +324,26 @@ Static invariants:
 - exits point to locations
 - no door references a missing key
 
-Solvability validation:
+MVP validation (hard requirement):
 
-- Build an abstract state for planning (ignore flavor text).
+- Reachability checks for all challenge-critical locations/entities.
+- Challenge dependency sanity (acyclic dependencies, no missing prerequisites).
+
+Advanced validation (later milestone):
+
 - Run a bounded solver that tries to reach “win conditions” from start using allowed actions.
 - Use strict bounds (maximum depth and node expansions per attempt) and a fixed retry budget per layer.
 - If unsolved, regenerate only the failing layer (e.g., rebind challenges, move items), not the entire world.
 - If solvability cannot be proven after the retry budget, fall back to a simpler, guaranteed-solvable template set and surface a debug-visible error that includes the `seed` and failing constraints.
+
+Layer boundaries for regeneration:
+
+- **World graph:** locations/exits and their roles.
+- **Population:** initial placement of NPCs/items/props.
+- **Challenge bindings:** which entities/locations satisfy template roles + gating placement.
+- **Storylet placement:** which storylets exist, their bindings, and their cooldowns.
+
+Regeneration should prefer the smallest layer that can fix the failure (for example, rebinding a challenge role before regenerating the whole world graph).
 
 Validation failure reporting (minimum):
 
@@ -315,6 +351,8 @@ Validation failure reporting (minimum):
 - failing challenge IDs and their prerequisites
 - unreachable location IDs (from the player start)
 - how many attempts were made per layer
+
+To avoid solver/runtime drift, the solver should be an alternate driver for the same rule definitions used at runtime (for example, applying the registered rules against a minimized state projection). The action set used for planning should be derived from the rule registry, not maintained separately.
 
 ## Runtime simulation
 
@@ -353,11 +391,18 @@ Rules should be composable and testable:
 Events are small structured records used by narration:
 
 ```ts
+export interface Clue {
+  id: string;
+  relatedChallengeId: string;
+  importance: 'primary' | 'redundant';
+}
+
 export type Event =
   | { type: 'moved'; entityId: EntityId; from: EntityId; to: EntityId }
   | { type: 'flag-set'; flag: string }
   | { type: 'unlocked'; doorId: EntityId }
-  | { type: 'spoke'; npcId: EntityId; topic: string };
+  | { type: 'spoke'; npcId: EntityId; topic: string }
+  | { type: 'hint'; clue: Clue };
 ```
 
 ### NPC behavior
@@ -395,6 +440,8 @@ Narration templates and storylets should be treated as versioned content (data-f
 
 Critical puzzle clues should not exist only as flavor text. They should be represented structurally (flags, goals, or explicit “hint” events) and rendered in at least one guaranteed way so that tests can assert clue presence even as narration templates evolve.
 
+Any text that implies a specific affordance (“this panel can be pried open”, “the curator responds to flattery”) should correspond to a real, modeled interaction in rules/state. Avoid puzzle-adjacent detail unless it is backed by an actual mechanic, to reduce red herrings.
+
 ## Saving + loading
 
 Two viable approaches:
@@ -423,11 +470,14 @@ Procedural systems are easiest to build when debugging is first-class:
    - Add `take`, `drop`, `inventory`.
 3. **Gating challenge template**
    - Add a `door` + `key` template and validate reachability.
-4. **NPC + talk**
+4. **Multi-step challenge graph**
+   - Implement a small challenge DAG (3–4 nodes) with at least one alternative path and redundant clues.
+   - Add a shallow reachability/feasibility check before introducing the full solver.
+5. **NPC + talk**
    - Add one NPC template with deterministic dialogue + memory.
-5. **Storylets + validation loop**
-   - Add a few storylets; run solvability validation and regenerate bindings on failure.
-6. **Save/load**
+6. **Storylets + validation loop**
+   - Add a few storylets; run advanced solvability validation and regenerate bindings on failure.
+7. **Save/load**
    - Snapshot save + load from file.
 
 ## Open design questions
