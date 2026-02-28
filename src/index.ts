@@ -1,6 +1,27 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 
+type CommandResult = 'continue' | 'exit';
+
+function handleCommand(input: string): CommandResult {
+  if (input === 'help') {
+    stdout.write('Commands: help, quit\n');
+    return 'continue';
+  }
+
+  stdout.write(`You said: ${input}\n`);
+  return 'continue';
+}
+
+function handleFatalError(err: unknown): void {
+  if (err instanceof Error) {
+    console.error(err.message);
+    return;
+  }
+
+  console.error(String(err));
+}
+
 async function main(): Promise<void> {
   const rl = createInterface({ input: stdin, output: stdout });
 
@@ -14,12 +35,8 @@ async function main(): Promise<void> {
       if (input === '') continue;
       if (input === 'quit' || input === 'exit') break;
 
-      if (input === 'help') {
-        stdout.write('Commands: help, quit\n');
-        continue;
-      }
-
-      stdout.write(`You said: ${input}\n`);
+      const result = handleCommand(input);
+      if (result === 'exit') break;
     }
   } finally {
     rl.close();
@@ -27,6 +44,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error(err);
+  handleFatalError(err);
   process.exitCode = 1;
 });

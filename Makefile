@@ -13,16 +13,17 @@ install:
 	npm install
 
 clean:
-	npm run clean
+	rm -rf dist
 
 build:
-	npm run build
+	$(MAKE) clean
+	npm exec -- tsc -p tsconfig.json
 
 typecheck:
-	npm run typecheck
+	npm exec -- tsc -p tsconfig.json --noEmit
 
 dev:
-	npm run dev
+	npm exec -- tsx src/index.ts
 
 start:
-	npm run start
+	node dist/index.js
