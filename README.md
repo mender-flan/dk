@@ -4,7 +4,7 @@ Procedural TypeScript command line text adventure.
 ## Dev
 
 ```bash
-make install
+make setup
 make dev
 ```
 

@@ -1,7 +1,12 @@
-.PHONY: help install clean build typecheck dev start
+.PHONY: help setup install clean build typecheck dev start
+
+ENTRY_TS := src/index.ts
+ENTRY_JS := dist/index.js
+DIST_DIR := dist
 
 help:
 	@echo 'Targets:'
+	@echo '  make setup       Install deps and build'
 	@echo '  make install     Install npm dependencies'
 	@echo '  make dev         Run the game in dev mode (TypeScript)'
 	@echo '  make build       Build to ./dist'
@@ -9,21 +14,22 @@ help:
 	@echo '  make typecheck   Type-check without emitting'
 	@echo '  make clean       Remove build output'
 
+setup: install build
+
 install:
 	npm install
 
 clean:
-	node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
+	rm -rf $(DIST_DIR)
 
-build:
-	$(MAKE) clean
+build: clean
 	npm exec -- tsc -p tsconfig.json
 
 typecheck:
 	npm exec -- tsc -p tsconfig.json --noEmit
 
 dev:
-	npm exec -- tsx src/index.ts
+	npm exec -- tsx $(ENTRY_TS)
 
 start:
-	node dist/index.js
+	node $(ENTRY_JS)

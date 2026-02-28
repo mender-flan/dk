@@ -1,43 +1,42 @@
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout } from 'node:process';
 
-type CommandResult = 'continue' | 'exit';
-
-function handleCommand(input: string): CommandResult {
-  if (input === 'quit' || input === 'exit') return 'exit';
-
-  if (input === 'help') {
-    stdout.write('Commands: help, quit\n');
-    return 'continue';
-  }
-
-  stdout.write(`Unknown command: ${input}. Type "help".\n`);
-  return 'continue';
-}
+import { type CommandResult, handleCommand } from './commands.js';
 
 function handleFatalError(err: unknown): void {
   if (err instanceof Error) {
-    console.error(err.message);
+    console.error('Fatal error:', err.stack ?? err.message);
     return;
   }
 
-  console.error(String(err));
+  console.error('Fatal error:', String(err));
 }
 
 async function main(): Promise<void> {
   const rl = createInterface({ input: stdin, output: stdout });
 
-  stdout.write('DK — procedural TypeScript text adventure\n');
-  stdout.write('Type "help" for commands, or "quit" to exit.\n\n');
-
   try {
+    stdout.write('DK — procedural TypeScript text adventure (bootstrap)\n');
+    stdout.write(
+      "Type 'help' for commands, or 'quit'/'exit' to leave the game. Story content will be added later.\n\n",
+    );
+
     while (true) {
-      const input = (await rl.question('> ')).trim();
+      let input: string;
+      try {
+        input = (await rl.question('> ')).trim();
+      } catch {
+        break;
+      }
 
       if (input === '') continue;
 
-      const result = handleCommand(input);
-      if (result === 'exit') break;
+      try {
+        const result: CommandResult = handleCommand(input);
+        if (result === 'exit') break;
+      } catch (err) {
+        console.error('Command error:', err instanceof Error ? err.message : String(err));
+      }
     }
   } finally {
     rl.close();
