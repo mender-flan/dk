@@ -1,0 +1,21 @@
+{
+  "name": "dk",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Procedural TypeScript command line text adventure.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "setup": "npm install && npm run build",
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^25.3.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}
