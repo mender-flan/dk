@@ -112,13 +112,24 @@ export interface EngineConfig {
   playerName?: string;
 }
 
+export interface PlayerView {
+  turn: number;
+  locationId: EntityId;
+  locationName: string;
+  visibleEntityIds: EntityId[];
+  inventoryEntityIds: EntityId[];
+  goals: Array<{ id: string; summary: string }>;
+}
+
 export interface StepResult {
   output: string;
   didAdvanceTurn: boolean;
+  events: Event[];
 }
 
 export interface GameEngine {
   describeCurrentLocation(): string;
+  getView(): PlayerView;
   step(input: string): StepResult;
   save(): string;
 }
@@ -189,6 +200,8 @@ export interface WorldState {
 
 This is “just enough structure” to support procedural generation, rule application, and narration.
 
+As entity behaviors grow (e.g., “an item that is also a container” or “a door that is also a prop”), we should avoid a combinatorial explosion of union variants by refactoring toward composable capabilities (such as `Located`, `Lockable`, `Container`) stored as tagged records or side tables.
+
 ## Procedural generation pipeline
 
 The generator builds the world in layers, each layer constrained by earlier layers.
@@ -246,6 +259,12 @@ Rules for solvability:
 - Avoid cycles (or make them explicit “alternative routes”).
 - Minimize “guess the verb” by allowing multiple solutions (e.g., `pry` OR `force` OR `use crowbar`).
 
+Runtime safety for critical resources:
+
+- Challenges can mark certain entities as `critical` (keys, codes, unique tools).
+- The engine should prevent these from being permanently lost (or provide a deterministic recovery path).
+- If a challenge allows consuming a resource, it should either produce a replacement, open an alternate route, or unlock the gate immediately.
+
 Generation approach:
 
 - Choose a small set of challenge templates.
@@ -277,7 +296,9 @@ Solvability validation:
 
 - Build an abstract state for planning (ignore flavor text).
 - Run a bounded solver that tries to reach “win conditions” from start using allowed actions.
+- Use strict bounds (maximum depth and node expansions per attempt) and a fixed retry budget per layer.
 - If unsolved, regenerate only the failing layer (e.g., rebind challenges, move items), not the entire world.
+- If solvability cannot be proven after the retry budget, fall back to a simpler, guaranteed-solvable template set and surface a debug-visible error that includes the `seed` and failing constraints.
 
 ## Runtime simulation
 
@@ -353,6 +374,8 @@ Implementation approach:
 - A small grammar system that picks among templates.
 - A “recently used lines” buffer to avoid repetition.
 - Summaries for multi-event outcomes (e.g., moving rooms triggers describing the new room, not every intermediate event).
+
+Narration templates and storylets should be treated as versioned content (data-first assets) and covered by regression tests (for example, golden output snapshots for a fixed seed and a short command sequence) so that engine rule changes don’t silently degrade the fiction layer.
 
 ## Saving + loading
 
