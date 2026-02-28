@@ -4,12 +4,14 @@ import { stdin, stdout } from 'node:process';
 type CommandResult = 'continue' | 'exit';
 
 function handleCommand(input: string): CommandResult {
+  if (input === 'quit' || input === 'exit') return 'exit';
+
   if (input === 'help') {
     stdout.write('Commands: help, quit\n');
     return 'continue';
   }
 
-  stdout.write(`You said: ${input}\n`);
+  stdout.write(`Unknown command: ${input}. Type "help".\n`);
   return 'continue';
 }
 
@@ -33,7 +35,6 @@ async function main(): Promise<void> {
       const input = (await rl.question('> ')).trim();
 
       if (input === '') continue;
-      if (input === 'quit' || input === 'exit') break;
 
       const result = handleCommand(input);
       if (result === 'exit') break;

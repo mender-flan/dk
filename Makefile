@@ -13,7 +13,7 @@ install:
 	npm install
 
 clean:
-	rm -rf dist
+	node -e "require('node:fs').rmSync('dist', { recursive: true, force: true })"
 
 build:
 	$(MAKE) clean
