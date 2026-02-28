@@ -28,7 +28,8 @@ async function main(): Promise<void> {
         input = (await rl.question('> ')).trim();
       } catch {
         stdout.write('\nGoodbye!\n');
-        break;
+        running = false;
+        continue;
       }
 
       if (input === '') continue;

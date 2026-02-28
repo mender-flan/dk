@@ -1,3 +1,4 @@
 import { rmSync } from 'node:fs';
+import { resolve } from 'node:path';
 
-rmSync(new URL('../dist', import.meta.url), { recursive: true, force: true });
+rmSync(resolve(process.cwd(), 'dist'), { recursive: true, force: true });

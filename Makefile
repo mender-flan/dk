@@ -10,8 +10,7 @@ help:
 	@echo '  make typecheck   Type-check without emitting'
 	@echo '  make clean       Remove build output'
 
-setup:
-	npm run setup
+setup: install build
 
 install:
 	npm install
