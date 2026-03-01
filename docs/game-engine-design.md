@@ -164,7 +164,7 @@ Contract:
 - After `step()` completes, `getView()` reflects the post-step view and is side-effect-free.
 - Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. For a fixed seed and input sequence, event ordering should be stable to keep debugging reproducible.
 - `output` is produced by narration; rules should emit only structured state updates and `events` (never final prose). Conceptually, `step()` runs: parse/resolve → simulate (rules) → narrate.
-- Failures: if parsing/resolution fails, or if a rule rejects an action (for example, `canApply` returns a failure), `didAdvanceTurn` is `false`, engine state is unchanged, and `events` should include a structured rejection event (which narration renders into `output`).
+- Failures: `step()` returns a `StepResult` for expected parse/resolve/rule rejections (and should not throw). On any rejection, `didAdvanceTurn` is `false`, engine state is unchanged, and `events` includes at least one structured rejection event (which narration renders into `output`).
 - `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
 
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
@@ -259,7 +259,7 @@ export interface SaveFile {
 }
 ```
 
-`SaveFile` defines the canonical on-disk JSON schema for snapshot saves; its `snapshot` payload is a `WorldSnapshot`. `WorldState` may have additional derived indexes at runtime, but those should be rebuilt from the snapshot on load.
+`SaveFile` defines the canonical on-disk JSON schema for snapshot saves; its `snapshot` payload is a `WorldSnapshot`. Any breaking change to either `SaveFile` or `WorldSnapshot` requires a `saveFormatVersion` bump. `WorldState` may have additional derived indexes at runtime, but those should be rebuilt from the snapshot on load.
 
 This is “just enough structure” to support procedural generation, rule application, and narration.
 
@@ -432,6 +432,7 @@ For solver validation to be meaningful, rules must behave as deterministic, side
 
 - For a given `(state, action)`, `canApply`/`apply` must be deterministic.
 - Rules must not perform I/O or mutate hidden global state.
+- Rules should treat `state` as immutable input; `apply` returns `nextState` rather than mutating `state` in place.
 - Any randomness must come solely from the seeded RNG (and be replayable/disabled in validation mode) so solver and runtime behavior cannot diverge.
 
 Events are small structured records used by narration:
@@ -445,7 +446,13 @@ export interface Clue {
 
 export type Event =
   | { type: 'moved'; entityId: EntityId; from: EntityId; to: EntityId }
-  | { type: 'rejected'; phase: 'parse' | 'resolve' | 'rules'; reason: string }
+  | {
+      type: 'rejected';
+      phase: 'parse' | 'resolve' | 'rules';
+      code?: string;
+      reason: string;
+      input?: string;
+    }
   | { type: 'flag-set'; flag: string }
   | { type: 'unlocked'; doorId: EntityId }
   | { type: 'spoke'; npcId: EntityId; topic: string }
