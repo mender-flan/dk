@@ -158,7 +158,7 @@ export function loadEngine(serialized: string): GameEngine;
 
 `StepResult` includes both human-readable output and structured data (`events`, `PlayerView`). The default CLI can rely primarily on `output`, while debug tooling and future frontends can ignore `output` and use the structured fields.
 
-Contract: `step()` updates engine state before returning; after a call completes, `getView()` returns the post-step view. `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
+Contract: `step()` updates engine state before returning; after a call completes, `getView()` returns the post-step view and is side-effect-free. Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
 
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
 
@@ -227,9 +227,9 @@ export interface WorldState {
 
 Dual-structure invariant (spatial containment):
 
-- `locationId` always refers to a room (an `Entity` with `kind: 'location'`).
-- Containers represent nesting via `container.contains`.
-- If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must update both `locationId` and `contains` so they remain consistent (and an entity should appear in at most one `contains` list at a time).
+- `locationId` always refers to a room (an `Entity` with `kind: 'location'`), never to a container.
+- Containers represent nesting via `container.contains` (and an entity should appear in at most one `contains` list at a time).
+- If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must update both `locationId` and `contains` so they remain consistent.
 
 Note: `Map`/`Set` are in-memory conveniences; snapshot saves should serialize JSON-friendly shapes (arrays/records) and rebuild any derived indexes on load. For example:
 
@@ -469,7 +469,7 @@ Two viable approaches:
 
 For a first implementation, snapshots are fine; a future change can move to seed+log once we have stable rules and indexes.
 
-Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (and then rebuild `Map`/`Set` on load). For example: `entitiesById: Record<EntityId, Entity>`, `flags: string[]`, `discoveredClues: string[]`.
+Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (and then rebuild `Map`/`Set` on load). For example: `entitiesById: Record<EntityId, Entity>`, `flags: string[]`, `discoveredClues: string[]`, `challengesById: Record<string, { summary: string; state: ChallengeView['state'] }>` plus scalars like `turn` and `playerId`.
 
 ## Debuggability and tooling
 
