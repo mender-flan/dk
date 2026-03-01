@@ -18,7 +18,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 
 **Non-functional**
 
-- `npm run build` and `npm run typecheck` pass.
+- `npm run build` and `npm run typecheck` (runs `tsc --noEmit`) pass.
 - **Determinism**: for the same seed and the same input sequence, the world state and emitted events are identical (including event ordering).
 - **No hidden randomness**: engine code does not call `Math.random()` (all randomness must be derived from a seeded RNG).
 - **Rejections are not exceptions**: expected failures (parse/resolve/rules rejections) do not throw; they return a structured rejection and leave engine state unchanged.
@@ -46,6 +46,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 **Non-functional**
 
 - The project builds via `npm run build`.
+- The project typechecks via `npm run typecheck`.
 
 ## Phase 1 — engine skeleton + core world + movement
 
