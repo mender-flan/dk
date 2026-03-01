@@ -162,7 +162,7 @@ Contract:
 
 - `step()` applies state changes before returning.
 - After `step()` completes, `getView()` reflects the post-step view and is side-effect-free.
-- Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream.
+- Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. For a fixed seed and input sequence, event ordering should be stable to keep debugging reproducible.
 - `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
 
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
@@ -234,9 +234,9 @@ Dual-structure invariant (spatial containment):
 
 - `locationId` always refers to a room (an `Entity` with `kind: 'location'`), never to a container.
 - Containers represent nesting via `container.contains` (and an entity should appear in at most one `contains` list at a time).
-- If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must update both `locationId` and `contains` so they remain consistent.
+- If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must keep `locationId` and `contains` consistent.
 
-To avoid invariant drift, rules should not mutate `locationId` or `container.contains` directly; prefer dedicated helpers that update both together (and can assert the invariant).
+To avoid invariant drift, rules should not mutate `locationId` or `container.contains` directly; prefer dedicated helpers that update both together (and can assert the invariant), for example: `moveEntityToRoom(entityId, roomId)`, `moveEntityToContainer(entityId, containerId)`, `removeEntityFromContainer(entityId)`.
 
 Note: `Map`/`Set` are in-memory conveniences; snapshot saves should serialize JSON-friendly shapes (arrays/records) and rebuild any derived indexes on load. For example:
 
@@ -250,6 +250,8 @@ export interface WorldSnapshot {
   discoveredClues: string[];
 }
 ```
+
+`WorldSnapshot` defines the canonical on-disk JSON schema for snapshot saves. `WorldState` may have additional derived indexes at runtime, but those should be rebuilt from the snapshot on load.
 
 This is “just enough structure” to support procedural generation, rule application, and narration.
 
@@ -481,7 +483,7 @@ Two viable approaches:
 
 For a first implementation, snapshots are fine; a future change can move to seed+log once we have stable rules and indexes.
 
-Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (see `WorldSnapshot` above) and then rebuild `Map`/`Set` and derived indexes on load.
+Snapshot saves should use the `WorldSnapshot` JSON shape described above.
 
 ### Save format contract
 
