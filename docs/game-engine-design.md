@@ -158,7 +158,12 @@ export function loadEngine(serialized: string): GameEngine;
 
 `StepResult` includes both human-readable output and structured data (`events`, `PlayerView`). The default CLI can rely primarily on `output`, while debug tooling and future frontends can ignore `output` and use the structured fields.
 
-Contract: `step()` updates engine state before returning; after a call completes, `getView()` returns the post-step view and is side-effect-free. Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
+Contract:
+
+- `step()` applies state changes before returning.
+- After `step()` completes, `getView()` reflects the post-step view and is side-effect-free.
+- Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream.
+- `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
 
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
 
@@ -231,12 +236,17 @@ Dual-structure invariant (spatial containment):
 - Containers represent nesting via `container.contains` (and an entity should appear in at most one `contains` list at a time).
 - If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must update both `locationId` and `contains` so they remain consistent.
 
+To avoid invariant drift, rules should not mutate `locationId` or `container.contains` directly; prefer dedicated helpers that update both together (and can assert the invariant).
+
 Note: `Map`/`Set` are in-memory conveniences; snapshot saves should serialize JSON-friendly shapes (arrays/records) and rebuild any derived indexes on load. For example:
 
 ```ts
 export interface WorldSnapshot {
+  turn: number;
   entitiesById: Record<EntityId, Entity>;
+  playerId: EntityId;
   flags: string[];
+  challengesById: Record<string, { summary: string; state: ChallengeView['state'] }>;
   discoveredClues: string[];
 }
 ```
@@ -469,7 +479,7 @@ Two viable approaches:
 
 For a first implementation, snapshots are fine; a future change can move to seed+log once we have stable rules and indexes.
 
-Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (and then rebuild `Map`/`Set` on load). For example: `entitiesById: Record<EntityId, Entity>`, `flags: string[]`, `discoveredClues: string[]`, `challengesById: Record<string, { summary: string; state: ChallengeView['state'] }>` plus scalars like `turn` and `playerId`.
+Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (see `WorldSnapshot` above) and then rebuild `Map`/`Set` and derived indexes on load.
 
 ## Debuggability and tooling
 
