@@ -225,6 +225,12 @@ export interface WorldState {
 }
 ```
 
+Dual-structure invariant (spatial containment):
+
+- `locationId` always refers to a room (an `Entity` with `kind: 'location'`).
+- Containers represent nesting via `container.contains`.
+- If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must update both `locationId` and `contains` so they remain consistent (and an entity should appear in at most one `contains` list at a time).
+
 This is “just enough structure” to support procedural generation, rule application, and narration.
 
 As entity behaviors grow (e.g., “an item that is also a container” or “a door that is also a prop”), we should avoid a combinatorial explosion of union variants by refactoring toward composable capabilities (such as `Located`, `Lockable`, `Container`) stored as tagged records or side tables.
@@ -452,6 +458,8 @@ Two viable approaches:
 2. **Seed + log:** serialize seed + action/event log and replay. Smaller, but needs stable determinism.
 
 For a first implementation, snapshots are fine; a future change can move to seed+log once we have stable rules and indexes.
+
+Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (and then rebuild `Map`/`Set` on load). For example: `entitiesById: Record<EntityId, Entity>`, `flags: string[]`, `discoveredClues: string[]`.
 
 ## Debuggability and tooling
 
