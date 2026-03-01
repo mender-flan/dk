@@ -19,6 +19,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 **Non-functional**
 
 - `npm run build` and `npm run typecheck` pass (where `typecheck` runs a no-emit TypeScript project check as defined in `package.json`).
+- Validation/solver budgets (bounded retries, solver depth, expansion budget, etc.) are centrally defined (for example, in `EngineConfig`) and are included in validation failure diagnostics alongside the seed.
 - **Determinism**: for the same seed and the same input sequence, the world state and emitted events are identical (including event ordering).
 - **No hidden randomness**: engine code does not call `Math.random()` (all randomness must be derived from a seeded RNG).
 - **Rejections are not exceptions**: expected failures (parse/resolve/rules rejections) do not throw; they return a structured rejection and leave engine state unchanged.
