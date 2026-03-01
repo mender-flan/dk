@@ -231,6 +231,16 @@ Dual-structure invariant (spatial containment):
 - Containers represent nesting via `container.contains`.
 - If an entity is inside a container, it still has `locationId = <roomId>` (the same room as the container). Rules must update both `locationId` and `contains` so they remain consistent (and an entity should appear in at most one `contains` list at a time).
 
+Note: `Map`/`Set` are in-memory conveniences; snapshot saves should serialize JSON-friendly shapes (arrays/records) and rebuild any derived indexes on load. For example:
+
+```ts
+export interface WorldSnapshot {
+  entitiesById: Record<EntityId, Entity>;
+  flags: string[];
+  discoveredClues: string[];
+}
+```
+
 This is “just enough structure” to support procedural generation, rule application, and narration.
 
 As entity behaviors grow (e.g., “an item that is also a container” or “a door that is also a prop”), we should avoid a combinatorial explosion of union variants by refactoring toward composable capabilities (such as `Located`, `Lockable`, `Container`) stored as tagged records or side tables.
