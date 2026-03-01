@@ -44,7 +44,6 @@ These criteria are intentionally repeated here so they don’t get lost between 
 - `help`, `quit`, `exit` behave as expected.
 
 **Non-functional**
-
 - `npm run build` passes.
 - `npm run typecheck` passes.
 
@@ -59,6 +58,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
   - constructs initial world state from a seed
   - supports `step(input)`
   - supports `getView()`
+- Define minimal stable envelopes for `PlayerView`, `StepResult`, and `Event` (including stable `type` tags and a `rejected` event shape), even if payloads evolve.
 - CLI wired to the engine (CLI reads input; engine decides output).
 
 **Acceptance criteria**
@@ -72,6 +72,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 - `step('look')` returns room description and does not advance the turn.
 - `step('go <direction>')` moves the player if an exit exists; otherwise it produces a rule rejection and does not advance the turn.
 - `getView()` returns a stable, minimal player view (turn, location, visible entities).
+- Turn advancement is explicit and consistent via `StepResult.didAdvanceTurn` and `PlayerView.turn` (successful `go` advances; `look` and rejections do not).
 
 **Non-functional**
 
@@ -234,4 +235,6 @@ These criteria are intentionally repeated here so they don’t get lost between 
 **Non-functional**
 
 - Derived indexes are rebuilt on load (they are not required to be stored in the snapshot).
+- `load` is atomic: parse/validate into a fresh snapshot/state and only then replace the current in-memory game.
 - Save/load fails with a clear error message for malformed JSON or unsupported `saveFormatVersion` (and does not corrupt the current in-memory game).
+- Malformed JSON or unsupported `saveFormatVersion` results in a structured rejection (no thrown exception) and state remains unchanged.
