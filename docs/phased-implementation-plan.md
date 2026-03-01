@@ -18,7 +18,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 
 **Non-functional**
 
-- `npm run build` and `npm run typecheck` pass (`typecheck` is defined in `package.json` as `tsc -p tsconfig.json --noEmit`).
+- `npm run build` and `npm run typecheck` pass (where `typecheck` runs a no-emit TypeScript project check as defined in `package.json`).
 - **Determinism**: for the same seed and the same input sequence, the world state and emitted events are identical (including event ordering).
 - **No hidden randomness**: engine code does not call `Math.random()` (all randomness must be derived from a seeded RNG).
 - **Rejections are not exceptions**: expected failures (parse/resolve/rules rejections) do not throw; they return a structured rejection and leave engine state unchanged.
@@ -58,7 +58,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
   - constructs initial world state from a seed
   - supports `step(input)`
   - supports `getView()`
-- Define minimal stable envelopes for `PlayerView`, `StepResult`, and `Event` (including stable `type` tags and a `rejected` event shape), even if payloads evolve.
+- Define minimal envelopes for `PlayerView`, `StepResult`, and `Event` (including `type` tags and a `rejected` event shape) and treat them as stable across phases, allowing backward-compatible evolution of payloads.
 - CLI wired to the engine (CLI reads input; engine decides output).
 
 **Acceptance criteria**
@@ -72,7 +72,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 - `step('look')` returns room description and does not advance the turn.
 - `step('go <direction>')` moves the player if an exit exists; otherwise it produces a rule rejection and does not advance the turn.
 - `getView()` returns a stable, minimal player view (turn, location, visible entities).
-- Turn advancement is explicit and consistent via `StepResult.didAdvanceTurn` and `PlayerView.turn` (successful `go` advances; `look` and rejections do not).
+- Turn advancement is explicit and consistent in the engine API (e.g., via `StepResult.didAdvanceTurn` and `PlayerView.turn`), where successful `go` advances and `look` and rejections do not.
 
 **Non-functional**
 
@@ -235,5 +235,5 @@ These criteria are intentionally repeated here so they don’t get lost between 
 **Non-functional**
 
 - Derived indexes are rebuilt on load (they are not required to be stored in the snapshot).
-- `load` is atomic: parse/validate into a fresh snapshot/state and only then replace the current in-memory game.
-- Malformed JSON / unsupported `saveFormatVersion` results in a structured rejection (no thrown exception) with a clear reason, and the current in-memory game is unchanged.
+- `load` is atomic with respect to the in-memory game: it parses and validates into a fresh snapshot/state, rebuilds any derived indexes, and only then replaces the current in-memory game. On any failure, the pre-load state is left unchanged.
+- Malformed JSON or unsupported `saveFormatVersion` results in a structured rejection (using the same rejection envelope/event shape as other engine failures, not a thrown exception) with a clear reason, and the current in-memory game is unchanged.
