@@ -158,6 +158,8 @@ export function loadEngine(serialized: string): GameEngine;
 
 `StepResult` includes both human-readable output and structured data (`events`, `PlayerView`). The default CLI can rely primarily on `output`, while debug tooling and future frontends can ignore `output` and use the structured fields.
 
+Contract: `step()` updates engine state before returning; after a call completes, `getView()` returns the post-step view. `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
+
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
 
 ## Data model
