@@ -72,7 +72,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 - `step('look')` returns room description and does not advance the turn.
 - `step('go <direction>')` moves the player if an exit exists; otherwise it produces a rule rejection and does not advance the turn.
 - `getView()` returns a stable, minimal player view (turn, location, visible entities).
-- Turn advancement is explicit and consistent in the engine API (e.g., via `StepResult.didAdvanceTurn` and `PlayerView.turn`), where successful `go` advances and `look` and rejections do not.
+- Turn advancement is explicit and consistent: the engine maintains a single canonical turn counter; `StepResult.didAdvanceTurn` is derived from whether that counter changed, and `PlayerView.turn` reflects its current value. Successful `go` advances; `look` and rejections do not.
 
 **Non-functional**
 
@@ -236,4 +236,4 @@ These criteria are intentionally repeated here so they don’t get lost between 
 
 - Derived indexes are rebuilt on load (they are not required to be stored in the snapshot).
 - `load` is atomic with respect to the in-memory game: it parses and validates into a fresh snapshot/state, rebuilds any derived indexes, and only then replaces the current in-memory game. On any failure, the pre-load state is left unchanged.
-- Malformed JSON or unsupported `saveFormatVersion` results in a structured rejection (using the same rejection envelope/event shape as other engine failures, not a thrown exception) with a clear reason, and the current in-memory game is unchanged.
+- For malformed JSON, I/O failures, or unsupported `saveFormatVersion`, `load` results in a structured rejection (using the same rejection envelope/event shape as other engine failures, not a thrown exception) with a clear reason, and the current in-memory game is unchanged.
