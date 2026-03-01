@@ -193,7 +193,7 @@ export interface EntityBase {
 }
 
 export interface Located {
-  locationId: EntityId; // location entity
+  locationId: EntityId; // location (room) entity
 }
 
 export interface Lockable {
@@ -380,7 +380,7 @@ Validation failure reporting (minimum):
 - unreachable location IDs (from the player start)
 - how many attempts were made per layer
 
-To avoid solver/runtime drift, the solver should be an alternate driver for the same rule definitions used at runtime (for example, applying the registered rules against a minimized state projection). The action set used for planning should be derived from the rule registry, not maintained separately.
+To avoid solver/runtime drift, the solver should be an alternate driver for the same rule definitions used at runtime (for example, applying the registered rules against a minimized state projection). The action set used for planning should be derived from the rule registry, not maintained separately: rules may optionally provide candidate action enumeration (for example, `candidates(state): Iterable<Action>`), and the solver should feed those candidates through the same `canApply`/`apply` used at runtime.
 
 ## Runtime simulation
 
@@ -415,6 +415,8 @@ Rules should be composable and testable:
 
 - `canApply(action, state)` returns either `ok` or a failure message.
 - `apply(action, state)` returns `{ nextState, events, didAdvanceTurn }`.
+
+For validation/solving, rules should also be able to enumerate candidate actions from a given state (or opt into generic candidate generators like “move through exits” or “use inventory item on nearby lockable”). The solver should derive candidates via the rule registry and still rely on `canApply`/`apply` to avoid duplicating logic.
 
 Events are small structured records used by narration:
 
@@ -480,6 +482,15 @@ Two viable approaches:
 For a first implementation, snapshots are fine; a future change can move to seed+log once we have stable rules and indexes.
 
 Note: in the in-memory model we may use `Map`/`Set` for convenience, but snapshot JSON should use plain objects/arrays (see `WorldSnapshot` above) and then rebuild `Map`/`Set` and derived indexes on load.
+
+### Save format contract
+
+- Saves include a `saveFormatVersion` field; version bumps must come with a clear migration/compatibility strategy.
+- `EntityId` values are stable across save/load and must never be re-assigned.
+- Derived indexes (such as location contents, reachability caches, etc.) are not required to be persisted; they can be rebuilt on load.
+- Replay stability:
+  - Snapshot saves don’t need an event log; they just need to fully capture the authoritative world state.
+  - Seed+log saves require a deterministic, versioned action/event stream; if runtime simulation uses RNG, it must be derived solely from the seed plus the replayed stream (or saved explicitly).
 
 ## Debuggability and tooling
 
