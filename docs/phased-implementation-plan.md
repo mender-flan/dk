@@ -19,7 +19,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 **Non-functional**
 
 - `npm run build` and `npm run typecheck` pass (where `typecheck` runs a no-emit TypeScript project check as defined in `package.json`).
-- Validation/solver budgets (bounded retries, solver depth, expansion budget, etc.) are defined in `EngineConfig` and included in validation failure diagnostics alongside the seed (at minimum: budget names + values).
+- Validation/solver budgets (bounded retries, solver depth, expansion budget, etc.) are defined in `EngineConfig`. For any validation/solver failure where a budget is consulted, the resulting diagnostics and `rejected` event include the seed, consulted budget names/values, and whether each budget was exhausted.
 - **Determinism**: for the same seed and the same input sequence, the world state and emitted events are identical (including event ordering).
 - **No hidden randomness**: engine code does not call `Math.random()` (all randomness must be derived from a seeded RNG).
 - **Rejections are not exceptions**: expected failures (parse/resolve/rules rejections) do not throw; they return a structured rejection and leave engine state unchanged.
@@ -59,7 +59,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
   - constructs initial world state from a seed
   - supports `step(input)`
   - supports `getView()`
-- Define minimal envelopes for `PlayerView`, `StepResult`, and `Event` (including `type` tags and a `rejected` event shape) and treat them as stable across phases for in-repo consumers. Allowed evolution is backward-compatible and additive (for example by adding optional fields or new event variants); renaming/removing fields or changing existing `type` tags is not. The event stream is for UI/debugging and is not a stable persistence format.
+- Define minimal envelopes for `PlayerView`, `StepResult`, and `Event` (including `type` tags and a `rejected` event shape) and treat them as stable across phases for all code in this repository. Allowed evolution is backward-compatible and additive (for example by adding optional fields or new event variants); renaming/removing fields or changing existing `type` tags is not. The event stream is for UI/debugging and is not a stable persistence or wire format.
 - CLI wired to the engine (CLI reads input; engine decides output).
 
 **Acceptance criteria**
@@ -73,7 +73,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 - `step('look')` returns room description and does not advance the turn.
 - `step('go <direction>')` moves the player if an exit exists; otherwise it produces a rule rejection and does not advance the turn.
 - `getView()` returns a stable, minimal player view (turn, location, visible entities).
-- Turn advancement is explicit and consistent: the engine maintains a single canonical turn counter that may only be mutated by the `step` pipeline and is the sole source of truth for turn state; `StepResult.didAdvanceTurn` is derived strictly from whether that counter changed during `step`, and `PlayerView.turn` always reflects its current value. Successful `go` advances; `look` and rejections do not.
+- Turn advancement is explicit and consistent: the engine maintains a single canonical turn counter that may only be mutated by the `step` pipeline and is the sole source of truth for turn state. At most one increment may occur per `step` call; `StepResult.didAdvanceTurn` is `true` iff the counter was incremented. `PlayerView.turn` always reflects the current counter value. Successful `go` advances; `look` and rejections do not.
 
 **Non-functional**
 
@@ -237,4 +237,4 @@ These criteria are intentionally repeated here so they don’t get lost between 
 
 - Derived indexes are rebuilt on load (they are not required to be stored in the snapshot).
 - `load` is atomic with respect to the in-memory game: it parses and validates into a fresh snapshot/state, rebuilds any derived indexes, and only then replaces the current in-memory game. On any failure, the pre-load state is left unchanged. The engine is single-threaded with respect to mutation operations; callers must not invoke `load` and `step` concurrently on the same engine instance.
-- For malformed JSON, I/O failures, or unsupported `saveFormatVersion`, `load` results in a structured rejection (using the same rejection envelope/event shape as other expected engine failures, not a thrown exception — i.e., an `Event` with `type: 'rejected'` and a stable `code`) with a clear reason, and the current in-memory game is unchanged. Truly unexpected internal errors (for example invariant violations) may still surface as exceptions.
+- For malformed JSON, I/O failures, unsupported `saveFormatVersion`, or schema/validation errors, `load` results in a structured rejection (using the same rejection envelope/event shape as other expected engine failures, not a thrown exception — i.e., an `Event` with `type: 'rejected'` and a stable `code`) with a clear reason, and the current in-memory game is unchanged. Truly unexpected internal errors (for example invariant violations) may still surface as exceptions.
