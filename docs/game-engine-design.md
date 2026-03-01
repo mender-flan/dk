@@ -163,6 +163,7 @@ Contract:
 - `step()` applies state changes before returning.
 - After `step()` completes, `getView()` reflects the post-step view and is side-effect-free.
 - Each `step()` call produces a fresh `StepResult` whose `events` are ordered (first-to-last) as they occurred during simulation, and the narrator should render `output` from that ordered stream. For a fixed seed and input sequence, event ordering should be stable to keep debugging reproducible.
+- `output` is produced by narration; rules should emit only structured state updates and `events` (never final prose). Conceptually, `step()` runs: parse/resolve → simulate (rules) → narrate.
 - `events` are primarily for UI/debugging and are not intended to be a stable persistence format for save/replay (they may evolve between versions).
 
 `save()` returns a JSON string containing `seed` + the minimal delta from initial state (or a full state snapshot for simplicity at first).
