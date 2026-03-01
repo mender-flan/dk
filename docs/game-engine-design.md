@@ -421,6 +421,12 @@ Rules should be composable and testable:
 
 For validation/solving, rules should also be able to enumerate candidate actions from a given state (or opt into generic candidate generators like “move through exits” or “use inventory item on nearby lockable”). The solver should derive candidates via the rule registry and still rely on `canApply`/`apply` to avoid duplicating logic.
 
+For solver validation to be meaningful, treat rules as deterministic, side-effect-free transforms:
+
+- For a given `(state, action)`, `canApply`/`apply` are deterministic.
+- Rules do not perform I/O or mutate hidden global state.
+- Any randomness comes solely from the seeded RNG (and is replayable/disabled in validation mode) so solver and runtime behavior cannot diverge.
+
 Events are small structured records used by narration:
 
 ```ts
