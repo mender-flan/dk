@@ -236,5 +236,4 @@ These criteria are intentionally repeated here so they don’t get lost between 
 
 - Derived indexes are rebuilt on load (they are not required to be stored in the snapshot).
 - `load` is atomic: parse/validate into a fresh snapshot/state and only then replace the current in-memory game.
-- Save/load fails with a clear error message for malformed JSON or unsupported `saveFormatVersion` (and does not corrupt the current in-memory game).
-- Malformed JSON or unsupported `saveFormatVersion` results in a structured rejection (no thrown exception) and state remains unchanged.
+- Malformed JSON / unsupported `saveFormatVersion` results in a structured rejection (no thrown exception) with a clear reason, and the current in-memory game is unchanged.
