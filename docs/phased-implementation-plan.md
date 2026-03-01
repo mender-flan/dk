@@ -59,7 +59,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
   - constructs initial world state from a seed
   - supports `step(input)`
   - supports `getView()`
-- Define minimal envelopes for `PlayerView`, `StepResult`, and `Event` (including `type` tags and a `rejected` event shape) and treat them as stable across phases, allowing backward-compatible evolution of payloads.
+- Define minimal envelopes for `PlayerView`, `StepResult`, and `Event` (including `type` tags and a `rejected` event shape) and treat them as stable across phases for in-repo consumers: future phases may only evolve these envelopes in a backward-compatible, additive way (for example by adding optional fields), without renaming or removing existing fields.
 - CLI wired to the engine (CLI reads input; engine decides output).
 
 **Acceptance criteria**
@@ -73,7 +73,7 @@ These criteria are intentionally repeated here so they don’t get lost between 
 - `step('look')` returns room description and does not advance the turn.
 - `step('go <direction>')` moves the player if an exit exists; otherwise it produces a rule rejection and does not advance the turn.
 - `getView()` returns a stable, minimal player view (turn, location, visible entities).
-- Turn advancement is explicit and consistent: the engine maintains a single canonical turn counter; `StepResult.didAdvanceTurn` is derived from whether that counter changed, and `PlayerView.turn` reflects its current value. Successful `go` advances; `look` and rejections do not.
+- Turn advancement is explicit and consistent: the engine maintains a single canonical turn counter that is the sole source of truth for turn state; `StepResult.didAdvanceTurn` is derived strictly from whether that counter changed during `step`, and `PlayerView.turn` always reflects its current value. Successful `go` advances; `look` and rejections do not.
 
 **Non-functional**
 
@@ -236,5 +236,5 @@ These criteria are intentionally repeated here so they don’t get lost between 
 **Non-functional**
 
 - Derived indexes are rebuilt on load (they are not required to be stored in the snapshot).
-- `load` is atomic with respect to the in-memory game: it parses and validates into a fresh snapshot/state, rebuilds any derived indexes, and only then replaces the current in-memory game. On any failure, the pre-load state is left unchanged.
-- For malformed JSON, I/O failures, or unsupported `saveFormatVersion`, `load` results in a structured rejection (using the same rejection envelope/event shape as other engine failures, not a thrown exception) with a clear reason, and the current in-memory game is unchanged.
+- `load` is atomic with respect to the in-memory game: it parses and validates into a fresh snapshot/state, rebuilds any derived indexes, and only then replaces the current in-memory game. On any failure, the pre-load state is left unchanged. Callers must ensure `load` and `step` are not interleaved on the same engine instance.
+- For malformed JSON, I/O failures, or unsupported `saveFormatVersion`, `load` results in a structured rejection (using the same rejection envelope/event shape as other expected engine failures, not a thrown exception) with a clear reason, and the current in-memory game is unchanged. Truly unexpected internal errors (for example invariant violations) may still surface as exceptions.
