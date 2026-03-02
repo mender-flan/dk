@@ -10,12 +10,22 @@ function parseSeedArg(args: string[]): string | undefined {
 
     if (arg === '--seed') {
       const value = args[i + 1];
-      if (value && !value.startsWith('-')) return value;
+      if (!value || value.startsWith('-')) {
+        console.error("Ignoring '--seed' without a value; using default seed.");
+        return undefined;
+      }
+
+      return value;
     }
 
     if (arg?.startsWith('--seed=')) {
       const [, value] = arg.split('=', 2);
-      if (value && value.trim() !== '') return value;
+      if (!value || value.trim() === '') {
+        console.error("Ignoring '--seed=' with an empty value; using default seed.");
+        return undefined;
+      }
+
+      return value;
     }
   }
 

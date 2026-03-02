@@ -4,6 +4,11 @@ export interface LocationState {
   id: EntityId;
   name: string;
   description: string;
+  /**
+   * Exits are a directional mapping to other location IDs.
+   *
+   * Invariant: every referenced location ID must exist in `WorldState.locations`.
+   */
   exits: Partial<Record<Direction, EntityId>>;
 }
 

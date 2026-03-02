@@ -1,3 +1,5 @@
+import type { Seed } from './types.js';
+
 export interface Rng {
   nextFloat(): number;
   nextInt(maxExclusive: number): number;
@@ -27,7 +29,7 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-export function createRng(seed: string): Rng {
+export function createRng(seed: Seed): Rng {
   const next = mulberry32(fnv1a32(seed));
 
   return {
