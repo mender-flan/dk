@@ -1,19 +1,33 @@
 import { stdout } from 'node:process';
 
-export type CommandResult = 'continue' | 'exit';
+import { GAME_HELP_TEXT } from './engine/rules/parse.js';
 
-const BASE_COMMANDS = ['help', 'quit', 'exit'] as const;
+type CliDecision = {
+  kind: 'cli';
+  action: 'continue' | 'exit';
+};
 
-export function handleCommand(input: string): CommandResult {
-  const cmd = input.trim().toLowerCase();
+type GameDecision = {
+  kind: 'game';
+};
 
-  if (cmd === 'quit' || cmd === 'exit') return 'exit';
+export type CommandDecision = CliDecision | GameDecision;
 
-  if (cmd === 'help') {
-    stdout.write(`Commands: ${BASE_COMMANDS.join(', ')}\n`);
-    return 'continue';
+const CLI_COMMANDS = ['help', 'quit', 'exit'] as const;
+
+export function handleCommand(input: string): CommandDecision {
+  const trimmed = input.trim();
+  const lowered = trimmed.toLowerCase();
+
+  if (lowered === 'quit' || lowered === 'exit') return { kind: 'cli', action: 'exit' };
+
+  if (lowered === 'help') {
+    stdout.write(
+      `CLI commands: ${CLI_COMMANDS.join(', ')}\n` +
+        `${GAME_HELP_TEXT}\n`,
+    );
+    return { kind: 'cli', action: 'continue' };
   }
 
-  stdout.write(`Unknown command: ${input}. Type "help".\n`);
-  return 'continue';
+  return { kind: 'game' };
 }
