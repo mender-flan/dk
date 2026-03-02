@@ -19,26 +19,21 @@ export type RuleResult =
     };
 
 export function applyAction(state: WorldState, input: string, action: Action): RuleResult {
-  if (action.type === 'look') {
-    return {
-      type: 'ok',
-      nextState: state,
-      didAdvanceTurn: false,
-      events: [{ type: 'looked', locationId: state.playerLocationId }],
-    };
+  switch (action.type) {
+    case 'look':
+      return {
+        type: 'ok',
+        nextState: state,
+        didAdvanceTurn: false,
+        events: [{ type: 'looked', locationId: state.playerLocationId }],
+      };
+    case 'go':
+      return applyGo(state, input, action.direction);
+    default: {
+      const _exhaustive: never = action;
+      throw new Error(`Unexpected action type: ${String(_exhaustive)}`);
+    }
   }
-
-  if (action.type === 'go') {
-    return applyGo(state, input, action.direction);
-  }
-
-  return {
-    type: 'rejected',
-    reason: 'unknown-command',
-    message: `Unknown command: ${input}. Type 'help'.`,
-    input,
-    budgetsConsulted: [],
-  };
 }
 
 function applyGo(state: WorldState, input: string, direction: Direction): RuleResult {

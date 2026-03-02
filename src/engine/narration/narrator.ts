@@ -1,9 +1,10 @@
 import { getLocation, type WorldState } from '../state.js';
-import type { Direction, Event } from '../types.js';
+import { DIRECTIONS } from '../directions.js';
+import type { Event } from '../types.js';
 
 function describeLocation(state: WorldState, locationId: string): string {
   const location = getLocation(state, locationId);
-  const exitDirections = Object.keys(location.exits) as Direction[];
+  const exitDirections = DIRECTIONS.filter((direction) => location.exits[direction]);
 
   const lines: string[] = [];
   lines.push(location.name);
@@ -12,7 +13,7 @@ function describeLocation(state: WorldState, locationId: string): string {
   if (exitDirections.length === 0) {
     lines.push('Exits: none.');
   } else {
-    lines.push(`Exits: ${exitDirections.sort().join(', ')}.`);
+    lines.push(`Exits: ${exitDirections.join(', ')}.`);
   }
 
   return lines.join('\n');
@@ -28,7 +29,9 @@ function renderEvent(state: WorldState, event: Event): string {
       return event.message;
     default: {
       const _exhaustive: never = event;
-      return _exhaustive;
+      throw new Error(
+        `Unhandled event type in renderEvent: ${(event as { type?: unknown }).type}`,
+      );
     }
   }
 }

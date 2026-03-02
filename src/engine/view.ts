@@ -1,20 +1,22 @@
 import { getLocation, type WorldState } from './state.js';
-import type { Direction, PlayerView } from './types.js';
+import { DIRECTIONS } from './directions.js';
+import type { PlayerView } from './types.js';
 
 export function buildPlayerView(state: WorldState): PlayerView {
   const location = getLocation(state, state.playerLocationId);
-  const exits = (Object.entries(location.exits) as Array<[Direction, string]>).map(
-    ([direction, toLocationId]) => {
-      const toLocation = getLocation(state, toLocationId);
-      return {
-        direction,
-        toLocationId,
-        toLocationName: toLocation.name,
-      };
-    },
-  );
+  const exits: PlayerView['exits'] = [];
+  for (const direction of DIRECTIONS) {
+    const toLocationId = location.exits[direction];
+    if (!toLocationId) continue;
 
-  exits.sort((a, b) => a.direction.localeCompare(b.direction));
+    // Assumes world referential integrity was validated during engine creation.
+    const toLocation = getLocation(state, toLocationId);
+    exits.push({
+      direction,
+      toLocationId,
+      toLocationName: toLocation.name,
+    });
+  }
 
   return {
     seed: state.seed,

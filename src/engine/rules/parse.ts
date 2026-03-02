@@ -12,6 +12,7 @@ export type Action =
 export type ParseResult =
   | {
       ok: true;
+      input: string;
       action: Action;
     }
   | {
@@ -35,12 +36,16 @@ const DIRECTION_ALIASES: Record<string, Direction> = {
   west: 'west',
 };
 
+export const GAME_HELP_TEXT =
+  'Game commands: look (l), go <direction>\n' +
+  'Directions: north/south/east/west (or n/s/e/w)';
+
 export function parseInput(input: string): ParseResult {
   const trimmed = input.trim();
   const lowered = trimmed.toLowerCase();
 
   if (lowered === 'look' || lowered === 'l') {
-    return { ok: true, action: { type: 'look' } };
+    return { ok: true, input: trimmed, action: { type: 'look' } };
   }
 
   if (lowered === 'go' || lowered.startsWith('go ')) {
@@ -57,20 +62,33 @@ export function parseInput(input: string): ParseResult {
       };
     }
 
-    const direction = DIRECTION_ALIASES[parts[1] ?? ''];
-    if (!direction) {
+    if (parts.length > 2) {
       return {
         ok: false,
         rejection: {
           reason: 'invalid-argument',
-          message: `Unknown direction: ${parts[1]}.`,
+          message: "Too many arguments for 'go'. Try 'go north'.",
           input: trimmed,
           budgetsConsulted: [],
         },
       };
     }
 
-    return { ok: true, action: { type: 'go', direction } };
+    const directionToken = parts[1]?.trim() ?? '';
+    const direction = DIRECTION_ALIASES[directionToken];
+    if (!direction) {
+      return {
+        ok: false,
+        rejection: {
+          reason: 'invalid-argument',
+          message: `Unknown direction: ${directionToken}.`,
+          input: trimmed,
+          budgetsConsulted: [],
+        },
+      };
+    }
+
+    return { ok: true, input: trimmed, action: { type: 'go', direction } };
   }
 
   return {
